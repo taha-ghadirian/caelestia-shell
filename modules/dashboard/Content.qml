@@ -111,6 +111,11 @@ Item {
                     index: 3
                     sourceComponent: Weather {}
                 }
+
+                Pane {
+                    index: 4
+                    sourceComponent: TimerView {}
+                }
             }
 
             Behavior on contentX {

@@ -26,6 +26,7 @@ Singleton {
     property alias sidebar: adapter.sidebar
     property alias services: adapter.services
     property alias paths: adapter.paths
+    property alias timer: adapter.timer
 
     // Public save function - call this to persist config changes
     function save(): void {
@@ -95,7 +96,15 @@ Singleton {
             utilities: serializeUtilities(),
             sidebar: serializeSidebar(),
             services: serializeServices(),
-            paths: serializePaths()
+            paths: serializePaths(),
+            timer: serializeTimer()
+        };
+    }
+
+    function serializeTimer(): var {
+        return {
+            savePath: timer.savePath,
+            projects: timer.projects
         };
     }
 
@@ -500,6 +509,7 @@ Singleton {
             property SidebarConfig sidebar: SidebarConfig {}
             property ServiceConfig services: ServiceConfig {}
             property UserPaths paths: UserPaths {}
+            property TimerConfig timer: TimerConfig {}
         }
     }
 }

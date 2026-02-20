@@ -48,6 +48,10 @@ JsonObject {
             enabled: true
         },
         {
+            id: "timerDisplay",
+            enabled: true
+        },
+        {
             id: "power",
             enabled: true
         }

@@ -159,6 +159,12 @@ ColumnLayout {
                 }
             }
             DelegateChoice {
+                roleValue: "timerDisplay"
+                delegate: WrappedLoader {
+                    sourceComponent: TimerDisplay {}
+                }
+            }
+            DelegateChoice {
                 roleValue: "power"
                 delegate: WrappedLoader {
                     sourceComponent: Power {
