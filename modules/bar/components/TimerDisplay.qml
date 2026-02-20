@@ -12,8 +12,8 @@ Column {
         ? Colours.palette.m3error
         : Colours.palette.m3outlineVariant
 
-    // Only visible when a timer is active
-    visible: ProjectTimer.running
+    // Only visible when a timer is active and the feature is enabled
+    visible: Config.timer.enabled && ProjectTimer.running
     spacing: Appearance.spacing.small
 
     Behavior on colour { CAnim {} }

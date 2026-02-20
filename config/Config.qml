@@ -103,6 +103,7 @@ Singleton {
 
     function serializeTimer(): var {
         return {
+            enabled: timer.enabled,
             savePath: timer.savePath,
             projects: timer.projects
         };

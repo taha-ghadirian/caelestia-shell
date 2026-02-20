@@ -53,6 +53,7 @@ Item {
         Tab {
             iconName: "timer"
             text: qsTr("Timer")
+            visible: Config.timer.enabled
         }
 
         // Tab {

@@ -114,7 +114,16 @@ Item {
 
                 Pane {
                     index: 4
+                    visible: Config.timer.enabled
                     sourceComponent: TimerView {}
+                }
+            }
+
+            Connections {
+                target: Config.timer
+                function onEnabledChanged(): void {
+                    if (!Config.timer.enabled && root.state.currentTab === 4)
+                        root.state.currentTab = 0;
                 }
             }
 
