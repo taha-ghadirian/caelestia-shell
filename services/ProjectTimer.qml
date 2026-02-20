@@ -14,6 +14,7 @@ Singleton {
     property string activeProject: ""
     property string activeColor: ""
     property bool running: false
+    property bool keyboardInputNeeded: false
     property real elapsedMs: 0
     property date startTime
 
@@ -57,7 +58,7 @@ Singleton {
         running = true;
     }
 
-    function stop(): void {
+    function stop(description: string): void {
         if (!running)
             return;
         const now = new Date();
@@ -66,7 +67,8 @@ Singleton {
             project: activeProject,
             color: activeColor,
             date: startTime.toISOString(),
-            duration: duration
+            duration: duration,
+            description: description ?? ""
         };
         // Prepend so newest is first
         records = [newRecord].concat(Array.from(records));
@@ -74,6 +76,13 @@ Singleton {
         activeProject = "";
         activeColor = "";
         elapsedMs = 0;
+        saveRecords();
+    }
+
+    function deleteRecord(index: int): void {
+        const arr = Array.from(records);
+        arr.splice(index, 1);
+        records = arr;
         saveRecords();
     }
 
