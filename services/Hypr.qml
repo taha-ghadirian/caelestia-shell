@@ -1,13 +1,13 @@
 pragma Singleton
 
-import qs.components.misc
-import qs.config
-import Caelestia
-import Caelestia.Internal
+import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
-import QtQuick
+import Caelestia
+import Caelestia.Config
+import Caelestia.Internal
+import qs.components.misc
 
 Singleton {
     id: root
@@ -15,8 +15,12 @@ Singleton {
     readonly property var toplevels: Hyprland.toplevels
     readonly property var workspaces: Hyprland.workspaces
     readonly property var monitors: Hyprland.monitors
+    readonly property bool usingLua: Hyprland.usingLua
 
-    readonly property HyprlandToplevel activeToplevel: Hyprland.activeToplevel?.wayland?.activated ? Hyprland.activeToplevel : null
+    readonly property HyprlandToplevel activeToplevel: {
+        const t = Hyprland.activeToplevel;
+        return t?.workspace?.name.startsWith("special:") || Hyprland.focusedWorkspace?.toplevels.values.length > 0 ? t : null;
+    }
     readonly property HyprlandWorkspace focusedWorkspace: Hyprland.focusedWorkspace
     readonly property HyprlandMonitor focusedMonitor: Hyprland.focusedMonitor
     readonly property int activeWsId: focusedWorkspace?.id ?? 1
@@ -54,11 +58,11 @@ Singleton {
             if (lastSpecialWorkspace) {
                 const workspace = workspaces.values.find(w => w.name === lastSpecialWorkspace);
                 if (workspace && workspace.lastIpcObject.windows > 0) {
-                    dispatch(`workspace ${lastSpecialWorkspace}`);
+                    dispatch(usingLua ? `hl.dsp.focus({ workspace = "${lastSpecialWorkspace}" })` : `workspace ${lastSpecialWorkspace}`);
                     return;
                 }
             }
-            dispatch(`workspace ${openSpecials[0].name}`);
+            dispatch(usingLua ? `hl.dsp.focus({ workspace = "${openSpecials[0].name}" })` : `workspace ${openSpecials[0].name}`);
             return;
         }
 
@@ -72,7 +76,11 @@ Singleton {
                 nextIndex = (currentIndex - 1 + openSpecials.length) % openSpecials.length;
         }
 
-        dispatch(`workspace ${openSpecials[nextIndex].name}`);
+        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${openSpecials[nextIndex].name}" })` : `workspace ${openSpecials[nextIndex].name}`);
+    }
+
+    function monitorNames(): list<string> {
+        return monitors.values.map(e => e.name);
     }
 
     function monitorFor(screen: ShellScreen): HyprlandMonitor {
@@ -80,13 +88,17 @@ Singleton {
     }
 
     function reloadDynamicConfs(): void {
-        extras.batchMessage(["keyword bindlni ,Caps_Lock,global,caelestia:refreshDevices", "keyword bindlni ,Num_Lock,global,caelestia:refreshDevices"]);
+        if (usingLua) {
+            extras.batchMessage(['eval hl.bind("Caps_Lock", hl.dsp.global("caelestia:refreshDevices"), { locked = true, non_consuming = true, ignore_mods = true, release = true })', 'eval hl.bind("Num_Lock", hl.dsp.global("caelestia:refreshDevices"), { locked = true, non_consuming = true, ignore_mods = true, release = true })']);
+        } else {
+            extras.batchMessage(["keyword bindlni ,Caps_Lock,global,caelestia:refreshDevices", "keyword bindlni ,Num_Lock,global,caelestia:refreshDevices"]);
+        }
     }
 
     Component.onCompleted: reloadDynamicConfs()
 
     onCapsLockChanged: {
-        if (!Config.utilities.toasts.capsLockChanged)
+        if (!GlobalConfig.utilities.toasts.capsLockChanged)
             return;
 
         if (capsLock)
@@ -96,7 +108,7 @@ Singleton {
     }
 
     onNumLockChanged: {
-        if (!Config.utilities.toasts.numLockChanged)
+        if (!GlobalConfig.utilities.toasts.numLockChanged)
             return;
 
         if (numLock)
@@ -106,15 +118,13 @@ Singleton {
     }
 
     onKbLayoutFullChanged: {
-        if (hadKeyboard && Config.utilities.toasts.kbLayoutChanged)
+        if (hadKeyboard && GlobalConfig.utilities.toasts.kbLayoutChanged)
             Toaster.toast(qsTr("Keyboard layout changed"), qsTr("Layout changed to: %1").arg(kbLayoutFull), "keyboard");
 
         hadKeyboard = !!keyboard;
     }
 
     Connections {
-        target: Hyprland
-
         function onRawEvent(event: HyprlandEvent): void {
             const n = event.name;
             if (n.endsWith("v2"))
@@ -137,11 +147,11 @@ Singleton {
                 Hyprland.refreshToplevels();
             }
         }
+
+        target: Hyprland
     }
 
     Connections {
-        target: root.focusedMonitor
-
         function onLastIpcObjectChanged(): void {
             const specialName = root.focusedMonitor.lastIpcObject.specialWorkspace.name;
 
@@ -149,6 +159,8 @@ Singleton {
                 root.lastSpecialWorkspace = specialName;
             }
         }
+
+        target: root.focusedMonitor
     }
 
     FileView {
@@ -185,8 +197,6 @@ Singleton {
     }
 
     IpcHandler {
-        target: "hypr"
-
         function refreshDevices(): void {
             extras.refreshDevices();
         }
@@ -198,9 +208,13 @@ Singleton {
         function listSpecialWorkspaces(): string {
             return root.workspaces.values.filter(w => w.name.startsWith("special:") && w.lastIpcObject.windows > 0).map(w => w.name).join("\n");
         }
+
+        target: "hypr"
     }
 
+    // qmllint disable unresolved-type
     CustomShortcut {
+        // qmllint enable unresolved-type
         name: "refreshDevices"
         description: "Reload devices"
         onPressed: extras.refreshDevices()
@@ -209,5 +223,7 @@ Singleton {
 
     HyprExtras {
         id: extras
+
+        usingLua: Hyprland.usingLua
     }
 }

@@ -1,9 +1,9 @@
 pragma Singleton
 
-import qs.config
-import qs.utils
-import Caelestia
 import Quickshell
+import Caelestia
+import Caelestia.Config
+import qs.utils
 
 Searcher {
     id: root
@@ -13,18 +13,15 @@ Searcher {
 
         if (entry.runInTerminal)
             Quickshell.execDetached({
-                command: ["app2unit", "--", ...Config.general.apps.terminal, `${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...entry.command],
+                command: [...GlobalConfig.general.apps.terminal, `${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...entry.command],
                 workingDirectory: entry.workingDirectory
             });
         else
-            Quickshell.execDetached({
-                command: ["app2unit", "--", ...entry.command],
-                workingDirectory: entry.workingDirectory
-            });
+            entry.execute();
     }
 
     function search(search: string): list<var> {
-        const prefix = Config.launcher.specialPrefix;
+        const prefix = GlobalConfig.launcher.specialPrefix;
 
         if (search.startsWith(`${prefix}i `)) {
             keys = ["id", "name"];
@@ -66,12 +63,13 @@ Searcher {
     }
 
     list: appDb.apps
-    useFuzzy: Config.launcher.useFuzzy.apps
+    useFuzzy: GlobalConfig.launcher.useFuzzy.apps
 
     AppDb {
         id: appDb
 
         path: `${Paths.state}/apps.sqlite`
-        entries: DesktopEntries.applications.values.filter(a => !Config.launcher.hiddenApps.includes(a.id))
+        favouriteApps: GlobalConfig.launcher.favouriteApps
+        entries: DesktopEntries.applications.values.filter(a => !Strings.testRegexList(GlobalConfig.launcher.hiddenApps, a.id))
     }
 }

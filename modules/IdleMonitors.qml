@@ -1,17 +1,18 @@
 pragma ComponentBehavior: Bound
 
 import "lock"
-import qs.config
-import qs.services
-import Caelestia.Internal
+import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import Caelestia.Config
+import Caelestia.Services
+import qs.services
 
 Scope {
     id: root
 
     required property Lock lock
-    readonly property bool enabled: !Config.general.idle.inhibitWhenAudio || !Players.list.some(p => p.isPlaying)
+    readonly property bool enabled: !GlobalConfig.general.idle.inhibitWhenAudio || !Players.list.some(p => p.isPlaying)
 
     function handleIdleAction(action: var): void {
         if (!action)
@@ -22,22 +23,30 @@ Scope {
         else if (action === "unlock")
             lock.lock.locked = false;
         else if (typeof action === "string")
-            Hypr.dispatch(action);
-        else
+            Hypr.dispatch(Hypr.usingLua && ["dpms off", "dpms on"].includes(action) ? `hl.dsp.dpms({ action = "${action === "dpms off" ? "disable" : "enable"}" })` : action);
+        else if (!SessionManager.exec(action))
             Quickshell.execDetached(action);
     }
 
-    LogindManager {
-        onAboutToSleep: {
-            if (Config.general.idle.lockBeforeSleep)
+    Connections {
+        function onAboutToSleep(): void {
+            if (GlobalConfig.general.idle.lockBeforeSleep)
                 root.lock.lock.locked = true;
         }
-        onLockRequested: root.lock.lock.locked = true
-        onUnlockRequested: root.lock.lock.unlock()
+
+        function onLockRequested(): void {
+            root.lock.lock.locked = true;
+        }
+
+        function onUnlockRequested(): void {
+            root.lock.lock.unlock();
+        }
+
+        target: SessionManager
     }
 
     Variants {
-        model: Config.general.idle.timeouts
+        model: GlobalConfig.general.idle.timeouts
 
         IdleMonitor {
             required property var modelData

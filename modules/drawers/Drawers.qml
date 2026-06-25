@@ -1,67 +1,24 @@
 pragma ComponentBehavior: Bound
 
-import qs.components
-import qs.components.containers
-import qs.services
-import qs.config
-import qs.modules.bar
-import Quickshell
-import Quickshell.Wayland
-import Quickshell.Hyprland
 import QtQuick
-import QtQuick.Effects
+import Quickshell
+import qs.services
 
 Variants {
-    model: Quickshell.screens
+    model: Screens.screens
 
     Scope {
         id: scope
 
         required property ShellScreen modelData
-        readonly property bool barDisabled: {
-            const regexChecker = /^\^.*\$$/;
-            for (const filter of Config.bar.excludedScreens) {
-                // If filter is a regex
-                if (regexChecker.test(filter)) {
-                    if ((new RegExp(filter)).test(modelData.name))
-                        return true;
-                } else {
-                    if (filter === modelData.name)
-                        return true;
-                }
-            }
-            return false;
-        }
 
         Exclusions {
             screen: scope.modelData
-            bar: bar
+            bar: content.bar
         }
 
-        StyledWindow {
-            id: win
-
-            readonly property bool hasFullscreen: Hypr.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen === 2) ?? false
-            readonly property int dragMaskPadding: {
-                if (focusGrab.active || panels.popouts.isDetached)
-                    return 0;
-
-                const mon = Hypr.monitorFor(screen);
-                if (mon?.lastIpcObject?.specialWorkspace?.name || mon?.activeWorkspace?.lastIpcObject?.windows > 0)
-                    return 0;
-
-                const thresholds = [];
-                for (const panel of ["dashboard", "launcher", "session", "sidebar"])
-                    if (Config[panel].enabled)
-                        thresholds.push(Config[panel].dragThreshold);
-                return Math.max(...thresholds);
-            }
-
-            onHasFullscreenChanged: {
-                visibilities.launcher = false;
-                visibilities.session = false;
-                visibilities.dashboard = false;
-            }
+        ContentWindow {
+            id: content
 
             screen: scope.modelData
             name: "drawers"
